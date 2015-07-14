@@ -16,9 +16,14 @@ from sh import pg_dump
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("database", help="Database name")
+action = parser.add_mutually_exclusive_group(required=True)
+action.add_argument("--dbs", help="Database name")
+action.add_argument("--move", help="Move backups from temp dir to backup dir",
+                    action="store_true")
 parser.add_argument("-d", "--backup-dir", help="Path for backup file",
                     default=".")
+parser.add_argument("--origin-dir", help="Path of temporary backup dir",
+                    default=None)
 parser.add_argument("--reason", help="Reason to make this backup",
                     default=False)
 parser.add_argument("--logfile", help="File where log will be saved",
@@ -33,9 +38,11 @@ logging.basicConfig(level=level,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("Extra_backup")
 
-database = args.database
+database = args.dbs
+move = args.move
 backup_dir = args.backup_dir
 reason = args.reason
+origin_dir =args.origin_dir
 
 
 def clean_files(files):
@@ -130,10 +137,28 @@ def backup_database(database_name, dest_folder,
     return os.path.abspath(full_name)
 
 
+def move_files(from_dir, to_dir):
+    """Moves files between directories
+
+    Args:
+        from_dir: Origin directory
+        to_dir: Destination directory
+    """
+    for each in os.listdir(from_dir):
+        lfile = os.path.join(to_dir, os.path.basename(each))
+        shutil.copy(each, lfile)
+    for each in os.listdir(from_dir):
+        os.remove(each)
+
+
 if __name__ == '__main__':
-    logger.info("Starting backup for %s", database)
-    try:
-        db_name = backup_database(database, backup_dir, reason)
-        logger.info("Backup complete. Available in: %s", db_name)
-    except Exception as e:
-        logger.error("Backup failed: %s", e)
+    if database:
+        logger.info("Starting backup for %s", database)
+        try:
+            db_name = backup_database(database, backup_dir, reason)
+            logger.info("Backup complete. Available in: %s", db_name)
+        except Exception as e:
+            logger.error("Backup failed: %s", e)
+    if move:
+        logger.info("Starting files' move")
+        move_files(origin_dir, backup_dir)
