@@ -16,13 +16,15 @@ from sh import pg_dump
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("database", help="Database name", required=True)
+parser.add_argument("database", help="Database name")
 parser.add_argument("-d", "--backup-dir", help="Path for backup file",
                     default=".")
 parser.add_argument("--reason", help="Reason to make this backup",
                     default=False)
 parser.add_argument("--logfile", help="File where log will be saved",
                     default=None)
+parser.add_argument("--log-level", help="Level of logger. INFO as default",
+                    default="info")
 
 args = parser.parse_args()
 level = getattr(logging, args.log_level.upper(), None)
@@ -125,7 +127,7 @@ def backup_database(database_name, dest_folder,
     logger.info("Compressing dump %s", dbase)
     full_name = compress_files(file_name, files, dest_folder)
     clean_files(files)
-    return full_name
+    return os.path.abspath(full_name)
 
 
 if __name__ == '__main__':
